@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../lib/hooks';
-import Layout from '../components/layout/Layout';
+import { useAuth } from '../../lib/hooks';
+import Layout from '../../components/layout/Layout';
 import Link from 'next/link';
-import { AVAILABLE_SERVICES } from '../lib/oauth/services';
+import { AVAILABLE_SERVICES } from '../../lib/oauth/services';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
