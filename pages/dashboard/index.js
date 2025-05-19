@@ -1,133 +1,126 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useAuth } from '../../lib/hooks';
-import Layout from '../../components/layout/Layout';
+import { useState, useEffect } from 'react';
+import { getUser, logout } from '../../lib/api/auth';
+import withAuth from '../../lib/withAuth';
 import Link from 'next/link';
-import { AVAILABLE_SERVICES } from '../../lib/oauth/services';
+import { useRouter } from 'next/router';
 
-export default function Dashboard() {
-  const { user, loading } = useAuth();
+function Dashboard() {
+  const [user, setUser] = useState(null);
   const router = useRouter();
 
-  // Redirigir a login si no hay usuario autenticado
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/login?redirect=/dashboard');
+    // Obtener datos del usuario del localStorage
+    const userData = getUser();
+    if (userData) {
+      setUser(userData);
     }
-  }, [user, loading, router]);
+  }, []);
 
-  if (loading || !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
-      </div>
-    );
-  }
+  const handleLogout = () => {
+    logout();
+    router.push('/auth/login');
+  };
 
   return (
-    <Layout>
-      <div className="bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-              Bienvenido a GENIA
-            </h1>
-            <p className="mt-3 max-w-2xl mx-auto text-xl text-gray-500 sm:mt-4">
-              Tu plataforma de automatización con IA para conectar tus servicios favoritos.
-            </p>
-          </div>
-
-          {/* Tarjeta de usuario */}
-          <div className="mt-10 bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Información de usuario
-              </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Detalles de tu cuenta y estado de conexiones.
-              </p>
+    <div className="min-h-screen bg-gray-100">
+      <nav className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <div className="flex-shrink-0 flex items-center">
+                <h1 className="text-xl font-bold text-primary-600">GENIA</h1>
+              </div>
+              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+                <Link href="/dashboard" className="border-primary-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                  Dashboard
+                </Link>
+                <Link href="/connections" className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                  Conexiones
+                </Link>
+              </div>
             </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
-              <dl className="sm:divide-y sm:divide-gray-200">
-                <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">
-                    Correo electrónico
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {user.email}
-                  </dd>
-                </div>
-                <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">
-                    ID de usuario
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {user.id}
-                  </dd>
-                </div>
-                <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">
-                    Estado de la cuenta
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                      Activo
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          </div>
-
-          {/* Sección de conexiones */}
-          <div className="mt-10">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Tus conexiones
-            </h2>
-            <p className="mt-2 text-gray-600">
-              Conecta tus servicios favoritos para automatizar tareas con GENIA.
-            </p>
-            
-            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {AVAILABLE_SERVICES.slice(0, 3).map((service) => (
-                <div
-                  key={service.id}
-                  className="bg-white overflow-hidden shadow rounded-lg"
-                >
-                  <div className={`p-5 ${service.color} ${service.textColor || 'text-white'} ${service.border || ''} flex items-center justify-center h-24`}>
-                    <img
-                      className="h-12 w-12"
-                      src={service.icon}
-                      alt={`${service.name} logo`}
-                    />
-                  </div>
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900">{service.name}</h3>
-                    <p className="mt-1 text-sm text-gray-500">{service.description}</p>
-                    <div className="mt-4">
-                      <Link
-                        href="/connections"
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                      >
-                        Conectar
-                      </Link>
+            <div className="hidden sm:ml-6 sm:flex sm:items-center">
+              <div className="ml-3 relative">
+                <div>
+                  <button
+                    type="button"
+                    className="bg-white rounded-full flex text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    id="user-menu"
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                  >
+                    <span className="sr-only">Abrir menú de usuario</span>
+                    <div className="h-8 w-8 rounded-full bg-primary-200 flex items-center justify-center text-primary-600 font-bold">
+                      {user?.name ? user.name.charAt(0).toUpperCase() : user?.email.charAt(0).toUpperCase()}
                     </div>
-                  </div>
+                  </button>
                 </div>
-              ))}
-            </div>
-            
-            <div className="mt-6 text-center">
-              <Link
-                href="/connections"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              </div>
+              <button
+                onClick={handleLogout}
+                className="ml-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
-                Ver todas las conexiones
-              </Link>
+                Cerrar sesión
+              </button>
             </div>
           </div>
         </div>
+      </nav>
+
+      <div className="py-10">
+        <header>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          </div>
+        </header>
+        <main>
+          <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className="px-4 py-8 sm:px-0">
+              <div className="border-4 border-dashed border-gray-200 rounded-lg p-6">
+                {user ? (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Bienvenido, {user.name || user.email}</h2>
+                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                      <div className="px-4 py-5 sm:px-6">
+                        <h3 className="text-lg leading-6 font-medium text-gray-900">Información de usuario</h3>
+                        <p className="mt-1 max-w-2xl text-sm text-gray-500">Detalles de tu cuenta</p>
+                      </div>
+                      <div className="border-t border-gray-200">
+                        <dl>
+                          <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt className="text-sm font-medium text-gray-500">Email</dt>
+                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.email}</dd>
+                          </div>
+                          <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt className="text-sm font-medium text-gray-500">Plan</dt>
+                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.plan || 'Free'}</dd>
+                          </div>
+                          <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt className="text-sm font-medium text-gray-500">Créditos</dt>
+                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user.creditos || 0}</dd>
+                          </div>
+                        </dl>
+                      </div>
+                    </div>
+                    <div className="mt-6">
+                      <Link href="/connections" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        Gestionar conexiones
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Cargando información de usuario...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
-    </Layout>
+    </div>
   );
 }
+
+export default withAuth(Dashboard);

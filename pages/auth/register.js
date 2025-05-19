@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { signUp } from '../../lib/supabase/client';
+import { registerUser, storeAuthData } from '../../lib/api/auth';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { referral } = router.query; // Capturar código de referido de la URL
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,21 +27,17 @@ export default function Register() {
       setLoading(true);
       setError(null);
       
-      const { user, session } = await signUp(email, password);
+      // Usar el nuevo servicio de autenticación que se comunica con el backend
+      const data = await registerUser(email, password, name, referral);
       
-      if (user) {
-        setSuccess(true);
-        // Si la autenticación es por enlace de correo, mostrar mensaje
-        if (user.identities?.length === 0) {
-          setSuccess(true);
-        } else {
-          // Si la autenticación es inmediata, redirigir al dashboard
-          router.push('/dashboard');
-        }
-      }
+      // Almacenar token y datos de usuario
+      storeAuthData(data);
+      
+      // Redirigir al dashboard
+      router.push('/dashboard');
     } catch (err) {
       console.error('Error al registrarse:', err);
-      setError(err.message || 'Error al registrarse. Por favor, inténtalo de nuevo.');
+      setError(err.detail || err.message || 'Error al registrarse. Por favor, inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -107,6 +105,20 @@ export default function Register() {
                   placeholder="Correo electrónico"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label htmlFor="name" className="sr-only">Nombre</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  placeholder="Nombre (opcional)"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   disabled={loading}
                 />
               </div>

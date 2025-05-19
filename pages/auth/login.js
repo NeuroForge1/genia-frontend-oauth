@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { signIn } from '../../lib/supabase/client';
+import { loginUser, storeAuthData } from '../../lib/api/auth';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
@@ -17,13 +17,17 @@ export default function Login() {
       setLoading(true);
       setError(null);
       
-      await signIn(email, password);
+      // Usar el nuevo servicio de autenticación que se comunica con el backend
+      const data = await loginUser(email, password);
+      
+      // Almacenar token y datos de usuario
+      storeAuthData(data);
       
       // Redirigir al dashboard después de iniciar sesión
       router.push('/dashboard');
     } catch (err) {
       console.error('Error al iniciar sesión:', err);
-      setError(err.message || 'Error al iniciar sesión. Por favor, inténtalo de nuevo.');
+      setError(err.detail || err.message || 'Error al iniciar sesión. Por favor, inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
