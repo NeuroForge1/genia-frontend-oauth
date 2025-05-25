@@ -15,12 +15,72 @@ export default function Register() {
   const router = useRouter();
   const { referral } = router.query; // Capturar código de referido de la URL
 
+  // Validación en tiempo real
+  const [validations, setValidations] = useState({
+    email: true,
+    password: true,
+    confirmPassword: true
+  });
+
+  // Función para validar email
+  const validateEmail = (email) => {
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  // Función para validar contraseña
+  const validatePassword = (password) => {
+    return password.length >= 8; // Mínimo 8 caracteres
+  };
+
+  // Manejar cambios en los campos con validación
+  const handleEmailChange = (e) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (value) {
+      setValidations({...validations, email: validateEmail(value)});
+    } else {
+      setValidations({...validations, email: true}); // No mostrar error si está vacío
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setPassword(value);
+    if (value) {
+      setValidations({...validations, password: validatePassword(value)});
+    } else {
+      setValidations({...validations, password: true}); // No mostrar error si está vacío
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    const value = e.target.value;
+    setConfirmPassword(value);
+    if (value) {
+      setValidations({...validations, confirmPassword: value === password});
+    } else {
+      setValidations({...validations, confirmPassword: true}); // No mostrar error si está vacío
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validar que las contraseñas coincidan
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
+    // Validar todos los campos antes de enviar
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+    const doPasswordsMatch = password === confirmPassword;
+    
+    setValidations({
+      email: isEmailValid,
+      password: isPasswordValid,
+      confirmPassword: doPasswordsMatch
+    });
+    
+    // Si hay errores de validación, no continuar
+    if (!isEmailValid || !isPasswordValid || !doPasswordsMatch) {
+      setError('Por favor, corrige los errores en el formulario antes de continuar.');
       return;
     }
     
@@ -29,30 +89,23 @@ export default function Register() {
       setError(null);
       setDebugInfo(null);
       
-      // Mostrar información de depuración
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      console.log('Intentando registro con backend URL:', backendUrl);
-      setDebugInfo(`Conectando con: ${backendUrl}/api/v1/auth/register`);
-      
-      // Usar el nuevo servicio de autenticación que se comunica con el backend
+      // Usar el servicio de autenticación que se comunica con el backend
       const data = await registerUser(email, password, name, referral);
+      
+      // Mostrar mensaje de éxito
+      setSuccess(true);
       
       // Almacenar token y datos de usuario
       storeAuthData(data);
       
-      // Redirigir al dashboard
-      router.push('/dashboard');
+      // Esperar un momento antes de redirigir para que el usuario vea el mensaje de éxito
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
+      
     } catch (err) {
       console.error('Error al registrarse:', err);
-      // Mostrar información detallada del error para depuración
-      if (err.response) {
-        setDebugInfo(`Error ${err.response.status}: ${JSON.stringify(err.response.data)}`);
-      } else if (err.request) {
-        setDebugInfo(`No se recibió respuesta del servidor. Posible error de CORS o conectividad.`);
-      } else {
-        setDebugInfo(`Error: ${err.message}`);
-      }
-      setError(err.detail || err.message || 'Error al registrarse. Por favor, inténtalo de nuevo.');
+      setError(err.message || 'Error al registrarse. Por favor, inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -90,24 +143,7 @@ export default function Register() {
           </div>
         )}
         
-        {debugInfo && (
-          <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-blue-700">
-                  {debugInfo}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {success ? (
+        {success && (
           <div className="bg-green-50 border-l-4 border-green-400 p-4">
             <div className="flex">
               <div className="flex-shrink-0">
@@ -117,37 +153,44 @@ export default function Register() {
               </div>
               <div className="ml-3">
                 <p className="text-sm text-green-700">
-                  ¡Registro exitoso! Hemos enviado un enlace de confirmación a tu correo electrónico. Por favor, revisa tu bandeja de entrada y sigue las instrucciones para completar el registro.
+                  ¡Registro exitoso! Redirigiendo al dashboard...
                 </p>
               </div>
             </div>
           </div>
-        ) : (
+        )}
+        
+        {!success && (
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div>
-                <label htmlFor="email-address" className="sr-only">Correo electrónico</label>
+                <label htmlFor="email-address" className="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
                 <input
                   id="email-address"
                   name="email"
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  className={`appearance-none rounded-t-md relative block w-full px-3 py-2 border ${!validations.email ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
                   placeholder="Correo electrónico"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   disabled={loading}
                 />
+                {!validations.email && (
+                  <p className="mt-1 text-sm text-red-600">
+                    Por favor, introduce un correo electrónico válido.
+                  </p>
+                )}
               </div>
               <div>
-                <label htmlFor="name" className="sr-only">Nombre</label>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mt-3 mb-1">Nombre</label>
                 <input
                   id="name"
                   name="name"
                   type="text"
                   autoComplete="name"
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
                   placeholder="Nombre (opcional)"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -155,34 +198,44 @@ export default function Register() {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="sr-only">Contraseña</label>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mt-3 mb-1">Contraseña</label>
                 <input
                   id="password"
                   name="password"
                   type="password"
                   autoComplete="new-password"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  className={`appearance-none relative block w-full px-3 py-2 border ${!validations.password ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
                   placeholder="Contraseña"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   disabled={loading}
                 />
+                {!validations.password && (
+                  <p className="mt-1 text-sm text-red-600">
+                    La contraseña debe tener al menos 8 caracteres.
+                  </p>
+                )}
               </div>
               <div>
-                <label htmlFor="confirm-password" className="sr-only">Confirmar contraseña</label>
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mt-3 mb-1">Confirmar contraseña</label>
                 <input
                   id="confirm-password"
                   name="confirm-password"
                   type="password"
                   autoComplete="new-password"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
+                  className={`appearance-none rounded-b-md relative block w-full px-3 py-2 border ${!validations.confirmPassword ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm`}
                   placeholder="Confirmar contraseña"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={handleConfirmPasswordChange}
                   disabled={loading}
                 />
+                {!validations.confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600">
+                    Las contraseñas no coinciden.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -190,13 +243,16 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Procesando...
+                  </>
                 ) : 'Registrarse'}
               </button>
             </div>
