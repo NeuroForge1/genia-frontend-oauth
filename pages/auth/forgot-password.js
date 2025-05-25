@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { resetPassword } from '../../lib/supabase/client';
+import { requestPasswordRecovery } from '../../lib/api/auth';
 import Link from 'next/link';
 
 export default function ForgotPassword() {
@@ -15,7 +15,8 @@ export default function ForgotPassword() {
       setLoading(true);
       setError(null);
       
-      await resetPassword(email);
+      // Usar el nuevo servicio de autenticación que se comunica con el backend
+      await requestPasswordRecovery(email);
       setSuccess(true);
     } catch (err) {
       console.error('Error al solicitar restablecimiento de contraseña:', err);
